@@ -1,0 +1,247 @@
+
+<html ng-app="myApp">
+<head>
+
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="//use.fontawesome.com/3d61d6959e.js"></script>
+
+    <link rel="stylesheet" href="//www.scriptr.io/lib/UIComponents/build/ide/css//components.min.css">
+    
+    <script src="//maps.google.com/maps/api/js?key=AIzaSyBcPYghFh_BXz4dDz-TXTHbU2iV3Wbf57I&libraries=drawing"></script>
+    <script src="//www.scriptr.io/lib/UIComponents/build/ide/js/template_resources.min.js"></script>
+    
+</head> 
+  
+  
+<style>
+.box {
+	/**border: none!important;**/
+}
+  
+</style>
+<script>
+
+(function() {
+  
+   $.urlParam = function(name){
+	     var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+	     if (results==null){
+	         return null;
+	     }else{
+	         return results[1] || 0;
+	     }
+	}
+
+	$.getUrlVars = function() {
+		var vars = [], hash;
+		var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+		for(var i = 0; i < hashes.length; i++)
+		{
+			hash = hashes[i].split('=');
+			vars.push(hash[0]);
+			vars[hash[0]] = hash[1];
+		}
+		return vars;
+	}
+      
+    var underscore = angular.module('underscore', []);
+		underscore.factory('_', ['$window', function($window) {		
+  		return $window._; // assumes underscore has already been loaded on the page		
+	}]);
+    
+
+    var wssConfig = ["wsClientProvider",function (wsClientProvider) {
+   	 	wsClientProvider.setBaseUrl("wss://" + window.location.host + "/");   	 
+        wsClientProvider.setToken($.urlParam("auth_token"));
+        wsClientProvider.setPublishChannel("requestChannel");
+        wsClientProvider.setSubscribeChannel("responseChannel");
+    }];
+
+    var httpsConfig = ["httpClientProvider",function (httpClientProvider) {
+   	  httpClientProvider.setBaseUrl("https://" + window.location.host);
+      httpClientProvider.setToken($.urlParam("auth_token"));
+    }]
+
+     var myApp= angular.module("myApp", ["underscore" , "WsClient", "HttpClient", "Chart", 'gridster', 'ui.bootstrap', 'ngRoute', 'Gauge', 'Speedometer', 'Odometer', 'Message', 'Map', 'Grid'])
+     
+     angular.module('myApp').run(cachedTemplates);  
+      
+     angular.module('myApp').config(wssConfig);
+     angular.module('myApp').config(httpsConfig);
+     
+     myApp.config(function($interpolateProvider, $locationProvider) {
+        $interpolateProvider.startSymbol('{[{');
+        $interpolateProvider.endSymbol('}]}');
+        $locationProvider.html5Mode({
+          enabled: true,
+          requireBase: false
+        });
+     });
+  
+  
+     myApp.controller('RootCtrl', function($scope, $interpolate, $location) {
+       var vm = this;
+       vm.gridsterOptions = {
+          pushing: false,
+          
+          minRows: 1, // the minimum height of the grid, in rows
+          maxRows: 100,
+          columns: 5, // the width of the grid, in columns
+          colWidth: 'auto', // can be an integer or 'auto'.  'auto' uses the pixel width of the element divided by 'columns'
+          rowHeight: 'match', // can be an integer or 'match'.  Match uses the colWidth, giving you square widgets.
+          margins: [10, 10], // the pixel distance between each widget
+          defaultSizeX: 2, // the default width of a gridster item, if not specifed
+          defaultSizeY: 1, // the default height of a gridster item, if not specified
+          mobileBreakPoint: 1024, // if the screen is not wider that this, remove the grid layout and stack the items
+          minColumns: 1,
+          resizable: {
+            enabled: false
+          },
+          draggable: {
+             enabled: false
+          }
+       };
+       
+        vm.init = function() {
+        }
+     });
+        	
+})();
+  
+</script>
+
+  <body>
+      <h1>Dashboard HTML and CSS are customizable</h1>
+      <div ng-controller="RootCtrl as vm" ng-init="vm.init();"> 
+		<div gridster="vm.gridsterOptions">
+          <ul>
+                <li class="myItem" gridster-item='{sizeX: 1, sizeY: 1, col: 0 , row: 0 }'>
+                    <div class="box">
+                        <div class="box-content">
+                          <div  tooltip-placement="bottom" uib-tooltip="" class="box-label"></div>
+                           <scriptr-gauge
+                                      	transport='wss'
+                                      	msg-tag='temperature'
+                                      	width='100'
+                                      	height-unit='%'
+                                      	height='100'
+                                      	gauge-value='22'
+                                      	api-params='{&quot;id&quot;: &quot;Nucleo&quot;, &quot;field&quot;:&quot;A_Temperature&quot;}'
+                                      	label='Device Temp'
+                                      	api='nucleo/api/getPropertyValue'
+                                      	min='0'
+                                      	max='50'
+                           ></scriptr-gauge>
+                        </div>
+                    </div>
+                </li>
+                <li class="myItem" gridster-item='{sizeX: 2, sizeY: 1, col: 1 , row: 0 }'>
+                    <div class="box">
+                        <div class="box-content">
+                          <div  tooltip-placement="bottom" uib-tooltip="" class="box-label"></div>
+                           <scriptr-chart
+                                      	type='line'
+                                      	xkey='creationDate'
+                                      	ykeys='[&quot;A_Humidity&quot;, &quot;A_Temperature&quot;]'
+                                      	labels='[&quot;Humidity&quot;, &quot;Temperature&quot;]'
+                                      	colors='[ &quot;#FCC717&quot;, &quot;#38B9D6&quot;]'
+                                      	transport='wss'
+                                      	msg-tag='chart'
+                                      	data=''
+                                      	resize='true'
+                                      	api='nucleo/api/listDeviceData'
+                                      	api-params='{&quot;id&quot;:&quot;Nucleo&quot;}'
+                                      	xlabels='Time'
+                           ></scriptr-chart>
+                        </div>
+                    </div>
+                </li>
+                <li class="myItem" gridster-item='{sizeX: 1, sizeY: 1, col: 1 , row: 1 }'>
+                    <div class="box">
+                        <div class="box-content">
+                          <div  tooltip-placement="bottom" uib-tooltip="" class="box-label"></div>
+                           <scriptr-gauge
+                                      	transport='wss'
+                                      	msg-tag='humidity'
+                                      	width='100'
+                                      	height-unit='%'
+                                      	height='100'
+                                      	gauge-value='30'
+                                      	api='nucleo/api/getPropertyValue'
+                                      	api-params='{&quot;id&quot;: &quot;Nucleo&quot;, &quot;field&quot;:&quot;A_Humidity&quot;}'
+                                      	min='0'
+                                      	max='100'
+                                      	label='Device Humidity %'
+                                      	custom-sectors='[{color:&quot;#A3CD3B&quot;,lo:0,hi:60},{color:&quot;#FF4A43&quot;,lo:60,hi:100}]'
+                           ></scriptr-gauge>
+                        </div>
+                    </div>
+                </li>
+                <li class="myItem" gridster-item='{sizeX: 1, sizeY: 1, col: 0 , row: 1 }'>
+                    <div class="box">
+                        <div class="box-content">
+                          <div  tooltip-placement="bottom" uib-tooltip="" class="box-label"></div>
+                           <scriptr-gauge
+                                      	transport='wss'
+                                      	msg-tag=''
+                                      	width='100'
+                                      	height-unit='%'
+                                      	height='100'
+                                      	gauge-value='30'
+                                      	api='nucleo/api/getOutsideTemperature'
+                                      	label='Outside Temp'
+                                      	min='0'
+                                      	max='50'
+                           ></scriptr-gauge>
+                        </div>
+                    </div>
+                </li>
+                <li class="myItem" gridster-item='{sizeX: 1, sizeY: 1, col: 2 , row: 1 }'>
+                    <div class="box">
+                        <div class="box-content">
+                          <div  tooltip-placement="bottom" uib-tooltip="" class="box-label"></div>
+                           <scriptr-gauge
+                                      	transport='wss'
+                                      	msg-tag='A_Pressure'
+                                      	width='100'
+                                      	height-unit='%'
+                                      	height='100'
+                                      	gauge-value='30'
+                                      	api-params='{&quot;id&quot;: &quot;Nucleo&quot;, &quot;field&quot;:&quot;A_Pressure&quot;}'
+                                      	api='nucleo/api/getPropertyValue'
+                                      	min='0'
+                                      	max='2000'
+                                      	label='Pa'
+                           ></scriptr-gauge>
+                        </div>
+                    </div>
+                </li>
+                <li class="myItem" gridster-item='{sizeX: 2, sizeY: 2, col: 3 , row: 0 }'>
+                    <div class="box">
+                        <div class="box-content">
+                          <div  tooltip-placement="bottom" uib-tooltip="" class="box-label"></div>
+                           <scriptr-chart
+                                      	type='area'
+                                      	xkey='creationDate'
+                                      	ykeys='[&quot;A_Pressure&quot;]'
+                                      	labels='[&quot;Pressure&quot;]'
+                                      	colors='[&quot;#CC5464&quot;]'
+                                      	transport='wss'
+                                      	msg-tag='chart'
+                                      	data=''
+                                      	resize='true'
+                                      	api='nucleo/api/listDeviceData'
+                                      	api-params='{&quot;id&quot;:&quot;Nucleo&quot;}'
+                                      	ymax='1020'
+                                      	ymin='990'
+                                      	units='1'
+                           ></scriptr-chart>
+                        </div>
+                    </div>
+                </li>
+          </ul>
+        </div>
+      </div>
+  </body>  
+</html>

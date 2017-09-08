@@ -1,0 +1,112 @@
+<html ng-app="myApp">
+
+    <head>
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link href="//fonts.googleapis.com/css?family=Josefin+Sans|Montserrat" rel="stylesheet">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ng-tags-input/3.1.1/ng-tags-input.min.css" />
+        <link rel="stylesheet" href="/UIComponents/dashboard/frontend/components/button/button.css">
+        <link rel="stylesheet" href="/nucleo/css/styles.css">
+        <script src="//use.fontawesome.com/3d61d6959e.js"></script>
+        
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/ng-tags-input/3.1.1/ng-tags-input.min.js"></script>
+
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-animate.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.0/angular-mocks.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular-cookies.js"></script>
+        <script src="//cdn.rawgit.com/gdi2290/angular-websocket/v1.0.9/angular-websocket.min.js"></script>
+        <script src="/UIComponents/dashboard/frontend/components/button/angular-promise-buttons.js"></script>
+
+        <script src="/UIComponents/dashboard/frontend/components/button/button.js"></script>
+
+        <script src="/UIComponents/httpProvider.js"></script>
+        <script src="/UIComponents/wsProvider.js"></script>
+        <!--script src="/UIComponents/config/scriptrTransport.js"></script-->
+    </head>  
+    <script>
+        var myApp= angular.module("myApp", ["ngTagsInput", 'HttpClient', "WsClient", "Button"])
+
+		var anonymousToken = "SUZBRTc5ODcxNQ==";
+        var wssConfig = ["wsClientProvider",function (wsClientProvider) {
+          wsClientProvider.setToken(anonymousToken);
+        }];
+
+        var httpsConfig = ["httpClientProvider",function (httpClientProvider) {
+          httpClientProvider.setBaseUrl("https://smart-container.scriptrapps.io");
+          httpClientProvider.setToken(anonymousToken);
+		}]
+        angular.module('myApp').config(wssConfig);
+        angular.module('myApp').config(httpsConfig);
+        
+        angular.module('myApp').controller('testCtrl', function($scope, httpClient) {
+            var vm = this;
+            vm.params = {} 
+
+            vm.init = function(){
+                httpClient
+                    .get("nucleo/api/getNotificationsSettings", null)
+                    .then(
+                    function(data, response) {
+                        if(data && (data.emails || data.mobiles)){
+                            var emailsArray = JSON.parse(data.emails);
+                            var mobilesArray = JSON.parse(data.mobiles);
+                            if(typeof emailsArray == "string") emailsArray = [emailsArray];
+                            if(typeof mobilesArray == "string") mobilesArray = [mobilesArray];
+                            vm.emails= emailsArray;
+                            vm.mobiles = mobilesArray;
+                        }else{
+                            vm.emails = [];
+                            vm.mobiles = [];
+                        }
+                        console.log('SUCCESS');
+                    },
+                    function(err) {
+                        console.log('ERROR');
+                    });
+            }
+
+            vm.buildParams = function(){
+                var emailsArray = [];
+                var mobilesArray = [];
+                for(var i = 0; i < vm.emails.length; i++){
+                    emailsArray.push(vm.emails[i]["text"]);
+                }
+                for(var i = 0; i < vm.mobiles.length; i++){
+                    mobilesArray.push(vm.mobiles[i]["text"]);
+                }
+                vm.params["emails"] = emailsArray;
+                vm.params["mobiles"] = mobilesArray;
+            } 
+        });
+    </script>
+    <body>
+        <div ng-controller="testCtrl as vm" ng-init="vm.init();">
+            <div class="text-center loading" ng-hide="vm.emails || vm.mobiles"><i class="fa fa-spinner fa-spin fa-3x"></i></div>
+            <div ng-show="vm.emails || vm.mobiles" class="generic-box">
+                <div class="box-height">
+                    <tags-input ng-model="vm.emails" placeholder="email addresses" allowed-tags-pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$"></tags-input>
+                    <tags-input ng-model="vm.mobiles" placeholder="mobile numbers" allowed-tags-pattern="[0-9-+s()]*$"></tags-input>
+                </div>
+                <div class="mt10">
+                    <scriptr-button
+                                    type="btn-success btn-default btn-sm"
+                                    is-disabled="false"
+                                    on-buttonclick="vm.buildParams"    
+                                    transport="https"    
+                                    label="save"
+                                    api-params="vm.params"   
+                                    api="nucleo/api/updateNotificationsSettings"
+                                    >
+                    </scriptr-button>
+                </div>
+            </div>
+        </div>
+    </body>
+
+</html>

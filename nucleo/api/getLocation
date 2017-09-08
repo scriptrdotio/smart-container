@@ -1,0 +1,20 @@
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("../entities/devicemanager");
+
+var params = request.parameters.body ? JSON.parse(request.parameters.body) : request.parameters;
+if (typeof(params) === "string") {
+    params = JSON.parse(params);
+}
+
+try {    
+    var locationStr = deviceManager.get(params.id).location;
+    var location = JSON.parse(locationStr);
+    var locationData = {};
+    locationData[params.id] = { 
+            "0" : [{ "lat" : {"value": "" + location.latitude}, "long" :{"value": "" + location.longitude}} ] ,
+			 "source" : "simulator","order" : [ "0" ]
+    };
+    return locationData;
+}catch(exception) {
+    return exception;
+}

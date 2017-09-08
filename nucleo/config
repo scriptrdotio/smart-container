@@ -1,0 +1,2 @@
+const MAX_IDLE = 2 * 60000;
+const EMAIL = "karim@scriptr.io";

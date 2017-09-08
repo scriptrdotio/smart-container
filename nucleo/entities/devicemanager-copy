@@ -1,0 +1,210 @@
+var document = require("document");
+var watsoniot = require("/modules/bluemix/watsoniot/messenger");
+var wunderground = require("/modules/wunderground/simpleclient");
+var smsmodule = require("/nucleo/api/twilio/sms/smsclient");
+var config = require("/nucleo/api/email/config");
+
+var log = require("log")
+
+/**
+ * @function get
+ * @param {String} id: the device's id
+ * @return {Object} device current status or null if not found
+ */
+function get(id) {
+   
+   var key = "device_"+ id;
+   var result = document.get(key);
+    if(result.metadata.status == "failure"){
+       return null;
+    }
+    
+    var data = result.result;
+    return data;
+}
+
+/**
+ * @function listHistory
+ * @param {String} id: the device's id
+ * @return {ArrayList} list of historical device data
+ */
+function listHistory(id) {
+
+    var key = "device_"+id;
+    var result = document.get(key);
+    if(result.metadata.status == "failure"){
+        throw result.metadata;
+    }
+    log.info("ListHistory "+result.result.entries);
+    var data = JSON.parse(result.result.entries);
+    return data;
+        
+}
+
+/**
+ * @function save
+ * @param {Object} data: data as received from bluemix
+ * @return {String} device id
+ */
+function save(data) {
+
+    var key = "device_"+ data.myName;
+    data["key"] = key;
+    
+    var result = document.get(key);
+    var entries = [];
+    if(result.metadata.status == "failure"){
+        log.info("document not found.")
+        if(!(result.metadata.errorCode == "DOCUMENT_NOT_FOUND")){
+            log.error("Error while getting data " + JSON.stringify(result));
+            return "ERROR";
+        } else {
+            var entry  = JSON.parse(JSON.stringify(data));
+            entry["creationDate"] = new Date().getTime();
+            entries = [entry];
+            data["meta.types"] = {
+                "entries": "text"
+            } 
+        }   
+    }else{ 
+        log.info("document found.")
+		entries = JSON.parse(result.result.entries);
+        var entry  = JSON.parse(JSON.stringify(data));
+        entry["creationDate"] = new Date().getTime();
+        entries.push(entry);
+        data["meta.types"] = {
+            "entries": "text"
+        } 
+    }
+    
+    data.entries = JSON.stringify(entries);
+    
+    log.info("Entries: "+  data.entries)
+    var resp = document.save(data);
+    
+    if (resp.metadata.status == "failure") {
+        throw resp.metadata;
+    }
+
+    //publish("responseChannel", {"id": "A_Temperature", "result":data.A_Humidity});
+    //publish("responseChannel", {"id": "A_Humidity", "result":data.A_Humidity});
+    //publish("responseChannel", {"id": "A_Pressure", "result":data.A_Pressure});
+    //publish("responseChannel", {"id": "chart", "result":listHistory(data.myName)});
+
+    var accX = data["Acc_X"];
+    accX = accX > 49 ? 49 : (accX < -49 ? -49 : accX);
+    var accY = data["Acc_Y"];
+    accY = accY > 49 ? 49 : (accY < -49 ? -49 : accY);
+    var accZ = data["Acc_Z"];
+    //publish("responseChannel", {"id": "acceleration", "result": {"x":accX, "y":accY, "z": accZ}});
+    
+    
+    publish("responseChannel", {"id": "all_data", "A_Temperature": data.A_Humidity, "A_Humidity": data.A_Humidity, "A_Pressure": data.A_pressure, "chart": listHistory(data.myName), "acceleration":  {"x":accX, "y":accY, "z": accZ}})
+
+    /* decison table */
+    /*
+    var payload = {
+
+        id: "Device" + data.name,
+        temperature: data.temperature,
+        outsideTemp:  wunderground.getCurrentTemperature("montreal,canada")
+    };
+
+    publish("decisionChannel", {"payload": payload});
+    */
+
+    var key = toHex("thresholdAlert");
+    var results = document.get(key);
+    if(results.metadata.status == "failure") {
+        return {status : "failure", errorDetails : "an error has occured when quering Log doc key: " + key, errorMsg: results};
+    } else if(results.result){
+        var delta = results.result.delta;
+        var alertsPayload = {
+            id: "Device" + data.myName,
+            delta: delta,
+            accX: data["Acc_X"],
+            accY: data["Acc_Y"],
+            accZ: data["Acc_Z"]
+        };
+       // publish("alertDecisionChannel", {"payload": alertsPayload});
+        
+        //call decision table
+        var table = require("rules/tickets/decisionTableUtils");
+        var decisions = table.executeDecisionTable("nucleo/entities/rules/alertDecisionTable", alertsPayload);
+        
+        
+        
+    }
+    return data.myName;
+}
+
+/**
+ * @function sendCommand to the device
+ * @param {String} id: the device's id
+ */
+function sendCommand(id, action) {
+
+    var messenger = new watsoniot.Messenger();
+    var device = {
+
+        type: "virtualdevice",    
+        id: id
+    };
+
+    var msg = {
+        commandId: action
+    };
+
+    return messenger.sendCommand(device, msg);
+}
+
+function alert(id, action) {
+    
+    if(action == "alert"){
+        var key = toHex("notificationSettings");
+        var queryParams = {};
+        queryParams["query"] =  'key = "'+ key +'"';
+        queryParams["fields"] = "emails, mobiles";
+        var results =  document.query(queryParams);
+        if(results.metadata.status == "failure") {
+            return {status : "failure", errorDetails : "an error has occured when quering Log doc key: " + key, errorMsg: results};
+        } else if(results.result.documents && results.result.documents.length == 1){
+            var doc =  results.result.documents[0];
+
+            var emailsArray = JSON.parse(doc.emails);
+            var mobilesArray = JSON.parse(doc.mobiles);
+            if(typeof emailsArray == "string") emailsArray = [emailsArray];
+            if(typeof mobilesArray == "string") mobilesArray = [mobilesArray];
+
+            // Send Email
+            for(var i = 0; i < emailsArray.length; i++){
+                sendMail(emailsArray[i], config.FROM, config.Subject, config.Body);
+            }
+            // Send SMS
+            for(var y = 0; y < mobilesArray.length; y++){
+                try {
+                    var smsClient = new smsmodule.TwilioSMS();
+                    smsClient.send({"number": mobilesArray[y], "message": config.Body});
+                }catch(exception){
+                    return exception;
+                }
+            }
+            
+        }
+    } 
+    
+}
+
+function toHex(input){
+    try { hexcase } catch(e) { hexcase=0; }
+    var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+    var output = "";
+    var x;
+    for(var i = 0; i < input.length; i++)
+    {
+        x = input.charCodeAt(i);
+        output += hex_tab.charAt((x >>> 4) & 0x0F)
+            + hex_tab.charAt( x & 0x0F);
+    }
+    return output;
+}

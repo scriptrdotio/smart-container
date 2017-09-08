@@ -1,0 +1,80 @@
+//Get payload parameters
+var pl = null;
+var requestBody = request.body;
+if (!requestBody) {
+	pl = request.parameters.payload;
+	pl = JSON.parse(pl);
+} else {
+	pl = requestBody.payload;
+}
+
+//START TABLE DECISION CODE
+function execute(pl) {
+
+var decision = [];
+
+//PRESCRIPT START
+var log = require("log");
+log.setLevel("info"); 
+log.info(JSON.stringify(pl));
+//PRESCRIPT END
+
+//RULES EVALUATION START
+if(typeof pl != "object") {
+  return[];
+} else { 
+	  if((pl != null && pl["accX"] != undefined && pl["accX"] > pl["delta"]) && isAny("accY") && isAny("accZ")){
+       decision.push({ "action": "alert" });
+	} 
+	 else if((pl != null && pl["accX"] != undefined && pl["accX"] < -pl["delta"]) && isAny("accY") && isAny("accZ")){
+       decision.push({ "action": "alert" });
+	} 
+	 else if(isAny("accX") && (pl != null && pl["accY"] != undefined && pl["accY"] > pl["delta"]) && isAny("accZ")){
+       decision.push({ "action": "alert" });
+	} 
+	 else if(isAny("accX") && (pl != null && pl["accY"] != undefined && pl["accY"] < -pl["delta"]) && isAny("accZ")){
+       decision.push({ "action": "alert" });
+	} 
+	 else if(isAny("accX") && isAny("accY") && (pl != null && pl["accZ"] != undefined && pl["accZ"] > (970  +pl["delta"]))){
+       decision.push({ "action": "alert" });
+	} 
+	 else if(isAny("accX") && isAny("accY") && (pl != null && pl["accZ"] != undefined && pl["accZ"] < (-970  +pl["delta"]))){
+       decision.push({ "action": "alert" });
+	} 
+}
+//RULES EVALUATION END
+
+//POSTSCRIPT START
+var smsmodule = require("/nucleo/api/twilio/sms/smsclient");
+var config = require("/nucleo/api/email/config");
+var deviceManager = require("/nucleo/entities/devicemanager");
+
+log.info(pl["id"] + ": Acceleration values above expected threshold");
+log.info(JSON.stringify(pl));
+if(decision[0] && decision[0].action){
+  log.info("action: " +JSON.stringify(decision[0]));
+
+deviceManager.alert(pl["id"], decision[0].action);
+}
+
+//POSTSCRIPT END
+
+}
+//Check if value is "in" or is "not in" array
+//return true or false
+function evalArrayOperation(value, operator,  array) {
+	if(operator == "in") {
+		return (array.indexOf(value)>-1);
+	} else {
+		return (array.indexOf(value) == -1) ;
+	} 
+}
+
+//isAny function, when condition expression is not important
+function isAny(param) {
+	return true;
+}
+
+//START_REST_CALL 
+return execute(pl);
+//END_REST_CALL

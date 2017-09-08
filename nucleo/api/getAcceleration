@@ -1,0 +1,21 @@
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("../entities/devicemanager");
+
+var params = request.parameters.body ? JSON.parse(request.parameters.body) : request.parameters;
+
+try {    
+    console.log(params.id)
+    var nucleoDocument = deviceManager.get(params.id);
+    
+    var accX = nucleoDocument["Acc_X"];
+    accX = accX > 49 ? 49 : (accX < -49 ? -49 : accX);
+    var accY = nucleoDocument["Acc_Y"];
+    accY = accY > 49 ? 49 : (accY < -49 ? -49 : accY);
+    var accZ = nucleoDocument["Acc_Z"];
+    
+    var result = {};
+    result["acceleration"] = {"x":accX, "y":accY, "z": accZ};
+    return result;
+}catch(exception) {
+    return exception;
+}

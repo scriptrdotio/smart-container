@@ -1,0 +1,10 @@
+/*
+ * Twilio account credentialss
+ */
+var accountSID = "AC4d3904c128cf312c904368c4a2d973bf";
+var authToken = "1fb18e9e33a4af0e8a838ceb24b4f2b9";
+
+/*
+ * Twilio "from" phone number 
+ */
+var from = "+14235464723";

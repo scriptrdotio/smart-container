@@ -1,0 +1,12 @@
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("../entities/devicemanager");
+
+var params = request.parameters.body ? JSON.parse(request.parameters.body) : request.parameters;
+try {    
+    var result = {};
+    result["chart"] = deviceManager.listHistory(params.id);
+    return result;
+}catch(exception) {
+    return exception;
+}
+

@@ -1,0 +1,9 @@
+var redis = require("redis");
+var deviceManager = require("/nucleo/entities/devicemanager");
+
+
+
+var prefix = "SUZBRTc5ODcxNQ==_device_"
+var data = deviceManager.get("Nucleo");
+
+ publish("responseChannel", {"id": "all_data", "result": { "A_Temperature": data.A_Temperature, "A_Humidity": data.A_Humidity, "A_Pressure": data.A_Pressure, "chart": deviceManager.listHistory("Nucleo"), "acceleration":  {"x":data["Acc_X"], "y":data["Acc_Y"], "z": data["Acc_Z"]}, "batteryLevel": data.batteryLevel}})

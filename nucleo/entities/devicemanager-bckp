@@ -1,0 +1,191 @@
+var document = require("document");
+var watsoniot = require("/modules/bluemix/watsoniot/messenger");
+var wunderground = require("/modules/wunderground/simpleclient");
+var smsmodule = require("/nucleo/api/twilio/sms/smsclient");
+var config = require("/nucleo/api/email/config");
+var redis = require("redis");
+var _= require("modules/underscore/underscore.js")._;
+
+var log = require("log");
+
+var prefix = "SUZBRTc5ODcxNQ==_device_"
+
+/**
+ * @function get
+ * @param {String} id: the device's id
+ * @return {Object} device current status or [] if not found
+ */
+function get(id) {
+   var key = prefix + id;
+   var result = redis.lrange(key, 0, 0);
+   return _.map(result, function(item){return JSON.parse(item)})[0];	
+}
+
+/**
+ * @function listHistory
+ * @param {String} id: the device's id
+ * @return {ArrayList} list of historical device data
+ */
+function listHistory(id) {
+
+    var key = prefix + id;
+    var result = redis.lrange(key, 0, 100);
+	return _.map(result, function(item){return JSON.parse(item)});
+}
+
+/**
+ * @function save
+ * @param {Object} data: data as received from bluemix
+ * @return {String} device id
+ */
+function save(data) {
+    
+    var key = prefix + data.myName;
+    var entry  = JSON.parse(JSON.stringify(data));
+    entry["creationDate"] = new Date().getTime();
+    redis.lpush(key, JSON.stringify(entry))
+    //and then remove everything but the last 100 keys
+    redis.ltrim(key, 0, 100);
+    
+    
+    //Calculate entries timestamp to decided on publishing to client
+    var publishData = true;
+    var prevKey = prefix + "timestamp"
+    var previousEntry = redis.get(prevKey);
+    if(!previousEntry) {
+        var p = redis.set(prevKey, JSON.stringify(entry));
+        log.info("P "+p)
+    } else {   
+        //log.info("Previous Entry: "+JSON.stringify(previousEntry));
+        //Get last 2 entries
+        var timeDelta =  (entry.creationDate - JSON.parse(previousEntry)["creationDate"])/1000;
+        log.info("Time difference: "+timeDelta)
+        if(timeDelta < 1) {
+            log.info("Don't publish data")
+            publishData = false;
+        } else {
+             log.info("Do publish data")
+             redis.set(prevKey, JSON.stringify(entry));
+        }
+    }
+    
+    if(publishData) {
+    //START MEERGING WITH LOCKS
+	var lock = 
+{"latitude":45.5925036750802,"longitude":-73.70003150453307, "bic":"TXXU","company":"TRIDENT SEAFOODS CORP", "city":"SEATTLE, WA 98107-4000", "country":"United States", "id": "TXXU-1234567", "type": "Refrigerated/reefer", "provider": "acme.com"};
+    var query = {}
+    query.temperature = data.A_Temperature;
+    query.pressure = data.A_Humidity;
+    query.humidity = data.A_Pressure;
+    query.tampered = false;
+    query.batteryLevel = Math.floor(Math.random() * 64) + 36;
+    query.state = "LOCKED";
+    query.lockId = lock.id;
+    var lockProcessor = require("locks/generator/process");
+    lockProcessor.processLockEvent(lock, query)
+    
+    //END MERGING WITH LOCKS
+    
+    var accX = data["Acc_X"];
+    accX = accX > 49 ? 49 : (accX < -49 ? -49 : accX);
+    var accY = data["Acc_Y"];
+    accY = accY > 49 ? 49 : (accY < -49 ? -49 : accY);
+    var accZ = data["Acc_Z"];
+
+    publish("responseChannel", {"id": "all_data", "result": { "A_Temperature": data.A_Temperature, "A_Humidity": data.A_Humidity, "A_Pressure": data.A_Pressure, "chart": listHistory(data.myName), "acceleration":  {"x":accX, "y":accY, "z": accZ}, "batteryLevel": query.batteryLevel}})
+    }
+    
+    var key = toHex("thresholdAlert");
+    var results = document.get(key);
+    if(results.metadata.status == "failure") {
+        return {status : "failure", errorDetails : "an error has occured when quering Log doc key: " + key, errorMsg: results};
+    } else if(results.result){
+        var delta = results.result.delta;
+        var alertsPayload = {
+            id: "Device" + data.myName,
+            delta: delta,
+            accX: data["Acc_X"],
+            accY: data["Acc_Y"],
+            accZ: data["Acc_Z"]
+        };
+        
+        //call decision table
+        var table = require("/nucleo/entities/rules/decisionTableUtils");
+        var decisions = table.executeDecisionTable("nucleo/entities/rules/alertDecisionTable", alertsPayload);
+    }
+    return data.myName;
+}
+
+/**
+ * @function sendCommand to the device
+ * @param {String} id: the device's id
+ */
+function sendCommand(id, action) {
+
+    var messenger = new watsoniot.Messenger();
+    var device = {
+
+        type: "virtualdevice",    
+        id: id
+    };
+
+    var msg = {
+        commandId: action
+    };
+
+    return messenger.sendCommand(device, msg);
+}
+
+function alert(id, action) {
+    log.info("SEND EMAILS"+ action + " "+id)
+    if(action == "alert"){
+        var key = toHex("notificationSettings");
+        var queryParams = {};
+        queryParams["query"] =  'key = "'+ key +'"';
+        queryParams["fields"] = "emails, mobiles";
+        var results =  document.query(queryParams);
+        log.info("Notification settings: "+JSON.stringify(results.result.documents))
+        if(results.metadata.status == "failure") {
+            return {status : "failure", errorDetails : "an error has occured when quering Log doc key: " + key, errorMsg: results};
+        } else if(results.result.documents && results.result.documents.length == 1){
+            var doc =  results.result.documents[0];
+
+            var emailsArray = JSON.parse(doc.emails);
+            var mobilesArray = JSON.parse(doc.mobiles);
+            if(typeof emailsArray == "string") emailsArray = [emailsArray];
+            if(typeof mobilesArray == "string") mobilesArray = [mobilesArray];
+            log.info("SEND EMAILS"+ JSON.stringify(emailsArray))
+            // Send Email
+            for(var i = 0; i < emailsArray.length; i++){
+                sendMail(emailsArray[i], config.FROM, config.Subject, config.Body);
+            }
+            log.info("SEND EMAILS")
+            // Send SMS
+            for(var y = 0; y < mobilesArray.length; y++){
+                try {
+                    var smsClient = new smsmodule.TwilioSMS();
+                    smsClient.send({"number": mobilesArray[y], "message": config.Body});
+                     log.info("SEND SMS")
+                }catch(exception){
+                    return exception;
+                }
+            }
+            
+        }
+    } 
+    
+}
+
+function toHex(input){
+    try { hexcase } catch(e) { hexcase=0; }
+    var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+    var output = "";
+    var x;
+    for(var i = 0; i < input.length; i++)
+    {
+        x = input.charCodeAt(i);
+        output += hex_tab.charAt((x >>> 4) & 0x0F)
+            + hex_tab.charAt( x & 0x0F);
+    }
+    return output;
+}

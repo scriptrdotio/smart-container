@@ -1,0 +1,27 @@
+/**
+ * Checks the last time the application received updates from the device
+ * Sends an alert by email to EMAIL (config) if this time is > MAX_IDLE (config)
+ */
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("/nucleo/entities/devicemanager");
+var config = require("/nucleo/config");
+
+try {
+    
+    var list = deviceManager.listHistory("Nucleo"); 
+    if (list && list[0]) {
+       
+        var lastRecord = list[0].creationDate;
+        var lastRecordTime = new Date(lastRecord).getTime(); 
+        var now = new Date().getTime(); 
+        if ((now - lastRecordTime) > config.MAX_IDLE) {
+            
+            sendMail(config.EMAIL, "nucleo connection checker", "No updates from device", "Your devices has stopped sending updates since " + lastRecord.creationDate);
+            return "alert sent";
+        }
+    }else {
+        return "no alert";
+    }    
+}catch(exception) {
+    return exception;    
+}

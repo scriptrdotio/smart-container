@@ -1,0 +1,15 @@
+/**
+ * Sends a command to a device on Watson
+ * @param {String} id : the identifier of the device
+ * @param {String} command: one of "Shutdown", "Start"
+ */
+
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("../entities/devicemanager");
+
+var params = request.parameters.body ? JSON.parse(request.parameters.body) : request.parameters;
+try {    
+    return deviceManager.sendCommand(params.id, "Start"); 
+}catch(exception) {
+    return exception;
+}

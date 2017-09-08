@@ -1,0 +1,7 @@
+TO = ["johnny.manolly@elementn.com", "met-office@scriptr.io"] //tom@scriptr.io
+FROM = "Scriptr"
+Subject = "Acceleration values above expected threshold"
+Body = "Please note that we have detected acceleration values above expected threshold"
+
+Number = "+6464849595"
+

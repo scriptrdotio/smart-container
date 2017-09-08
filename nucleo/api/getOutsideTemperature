@@ -1,0 +1,7 @@
+/**
+ * Read current temperature in Montreal canada from Wunderground (https://www.wunderground.com/q/zmw:00000.94.71612?MR=1)
+ */
+var wunderground = require("/modules/wunderground/simpleclient");
+var outsideTemp = wunderground.getCurrentTemperature("newyork,usa");
+//publish("responseChannel", {"id": "outside", "result": outsideTemp});
+return outsideTemp;

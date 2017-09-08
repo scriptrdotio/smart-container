@@ -1,0 +1,10 @@
+var smsmodule = require("/nucleo/api/twilio/sms/smsclient");
+var config = require("/nucleo/api/email/config");
+
+try {
+  
+  var smsClient = new smsmodule.TwilioSMS();
+  return smsClient.send({"number": "+9613857943", "message": config.Body});
+}catch(exception){
+  return exception;
+}

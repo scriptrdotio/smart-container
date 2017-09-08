@@ -1,0 +1,12 @@
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("../entities/devicemanager");
+
+log.info(JSON.stringify(request));
+var body = request.body ? request.body : JSON.parse(request.rawBody);  
+var data = body.d;
+
+try {
+    return deviceManager.save(data);
+}catch(exception) {
+    return exception;
+}

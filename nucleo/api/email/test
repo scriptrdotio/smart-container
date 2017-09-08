@@ -1,0 +1,3 @@
+var config = require("/nucleo/api/email/config");
+
+sendMail("johnny.manolly@elementn.com", "Scriptr", "Lock tampering attempt at location ", config.Body)

@@ -1,0 +1,22 @@
+/**
+ * This script is subscribed to the "requestChannel" to which the websocket node in the node-red sample application is publishing
+ * The aforementioned applicaton simply reads messages from the device's mqtt topic and sends them through WS
+ * This script is also subscribed to the "watson" channel that has a binding with the watson_nucleo endpoint. The latter is actually
+ * subscribed to the nucleo device's mqtt topic on waston iot, therefore, the current script can directly consume messages from the topic
+ * Once the current script receives the payload, it parses it and saves the data using an instance of DeviceManager
+ */ 
+systemLogger.setLevel("OFF");
+var log = require("log"); log.setLevel("info");
+var deviceManager = require("/nucleo/entities/devicemanager");
+
+// read data from request rawBody or body property
+var body = request.body ? request.body : (request.rawBody) ? request.rawBody : request.parameters;
+var data = typeof(data) == "string" ? JSON.parse(body).d : body.d;
+
+log.info("/nucleo/api/subscription/subscriber received the following payload \n" + JSON.stringify(data));
+
+try {
+    return deviceManager.save(data);
+}catch(exception) {
+	return exception;    
+}

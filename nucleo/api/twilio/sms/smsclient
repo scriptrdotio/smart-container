@@ -1,0 +1,67 @@
+var clientModule = require("../client");
+var configScript =  require("./config");
+
+/**
+ * Simple Twilio connector
+ * @class Twilio
+ * @constructor
+ * @param {Object} [config] // configuration object, optional, if not provided falls back to the ./config script
+ * @param {String} [config.accountSID] : twilio account key
+ * @param {String} [config.authToken] : twilio account token
+ * @param {String} [config.authToken] : twilio account token
+ * @throws {Error}
+ */
+function TwilioSMS(config) {
+  
+  if (!config) {
+    config = configScript;
+  }
+  
+  if(!config.accountSID || !config.authToken) {
+    
+    throw {
+      errorCode: "Invalid_Parameter",
+      erroDetail: "TwilioSMS: you should provide an account SID and an auth token" 
+    };
+  }
+  
+  for (var key in config) {
+    this[key] = config[key];
+  }
+  
+  this.client = new clientModule.Client({username:this.accountSID, password:this.authToken});
+}
+
+/**
+ * @method send
+ * @param {Object} [sms] // sms configuration
+ * @param {String} [sms.number]
+ * @param {String} [sms.message]
+ * @throws {Error}
+ */
+TwilioSMS.prototype.send = function(sms) {
+  
+  if (!sms || !sms.number || !sms.message) {
+    
+    throw {
+      errorCode: "Invalid_Parameter",
+      erroDetail: "TwilioSMS.send: you should provide a target phone number and a body" 
+    };
+  }
+  
+  var instructionParams = {
+    
+    url: "https://api.twilio.com/2010-04-01/Accounts/" + this.accountSID + "/Messages.json",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    params: {
+      "To": sms.number,
+      "From": this.from,
+      "Body": sms.message
+    }    
+  };  
+  
+  return this.client.callApi(instructionParams);
+};

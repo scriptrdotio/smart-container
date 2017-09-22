@@ -1,0 +1,36 @@
+var log = require("log");
+log.setLevel("INFO");
+
+function execute(newState, request){
+  	var config = require("rules/config");
+    var notifications_settings =  storage.global[getNotificationsSettings(newState)];
+    if(notifications_settings && notifications_settings["emails"]) {
+        var emails = JSON.parse(notifications_settings["emails"]);
+        for(var i = 0; i < emails.length; i++) {
+          sendEmailOnUnlock(request, newState, emails[i]["text"], config.FROM);
+        }
+     } else {
+        sendEmailOnUnlock(request, newState, config.TO, config.FROM)
+     }
+  return true;
+}
+
+//Needs to be moved out
+function getNotificationsSettings(lock) {
+  	var company = lock.provider.split(".")[0]
+    return "notifications_settings_"+company;
+}
+
+function sendEmailOnUnlock(request, newState, toEmail, fromEmail) {
+    if(request.user.id != null) { 
+    	if(newState.state == "UNLOCKED") { 
+        var body = "Please note that we have detected an unlock event on container: "+newState["id"]+" by: "+(request.user.id == null? "system" : request.user.id)+ ".";
+        var subject = newState["id"]+": Unlock Alert";
+      	log.info(sendMail(toEmail, fromEmail, subject, body));
+         
+        }else{
+            log.info(newState.id + " is now locked");
+        }
+    }
+  	
+}

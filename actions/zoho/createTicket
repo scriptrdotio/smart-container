@@ -1,0 +1,29 @@
+//MFE: I THINK THIS CAN BE MOVED TO THE DECISION TABLE POST_SCRIPT
+var zohoLib =  require("actions/lib/zoho/zoho.js");
+var config = require("./config");
+var _ = require("modules/underscore/underscore.js")._;
+var zoho = new zohoLib.zoho();
+/** 
+ * For each decision table result (action) run the specified action (zoho ticket or email)
+ * and build emails / content from template using underscore
+ */
+function execute(action, data){
+  var log = require("log");
+  var templateData = {
+    lockId: data.id,
+    data: data
+  };
+  if(action.BATTERY_TICKET){
+    log.info("battery ticket set, creating zoho ticket");
+    templateData.batteryThreshold = action["BATTERY_TICKET"];
+    var compiledSubjectTemplate = _.template(config.getTemplate("BATTERY_TICKET").subject);
+    var compiledBodyTemplate = _.template(config.getTemplate("BATTERY_TICKET").body);
+    log.info(JSON.stringify(zoho.createTicket(null , config.TO_EMAIL, compiledSubjectTemplate(templateData), compiledBodyTemplate(templateData), data.id)));
+  }
+  if(action.TAMPERED_TICKET){
+    log.info("Tampered ticket set, creating zoho ticket");
+    var compiledSubjectTemplate = _.template(config.getTemplate("TAMPERED_TICKET").subject);
+    var compiledBodyTemplate = _.template(config.getTemplate("TAMPERED_TICKET").body);
+    log.info(JSON.stringify(zoho.createTicket(null , config.TO_EMAIL, compiledSubjectTemplate(templateData), compiledBodyTemplate(templateData), data.id)));
+  }
+}

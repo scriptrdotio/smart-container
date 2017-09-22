@@ -29,7 +29,7 @@ function get(id) {
 function listHistory(id) {
 
     var key = prefix + id;
-    var result = redis.lrange(key, 0, 100);
+    var result = redis.lrange(key, 0, 50);
 	return _.map(result, function(item){return JSON.parse(item)});
 }
 
@@ -47,7 +47,7 @@ function save(data) {
     entry["batteryLevel"] = generatedBatteryLevel;
     redis.lpush(key, JSON.stringify(entry))
     //and then remove everything but the last 100 keys
-    redis.ltrim(key, 0, 100);
+    redis.ltrim(key, 0, 50);
     
     
     //Calculate entries timestamp to decided on publishing to client

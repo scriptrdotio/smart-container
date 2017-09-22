@@ -1,0 +1,29 @@
+var log = require("log");
+log.setLevel("INFO");
+function execute(newState, request){
+  	var config = require("rules/config");
+    var notifications_settings =  storage.global[getNotificationsSettings(newState)];
+    if(notifications_settings && notifications_settings["emails"]) {
+        var emails = JSON.parse(notifications_settings["emails"]);
+        for(var i = 0; i < emails.length; i++) {
+          sendEmailOnTampered(request, newState, emails[i]["text"], config.FROM);
+        }
+     } else {
+        sendEmailOnTampered(request, newState, config.TO, config.FROM)
+     }
+  return true;
+}
+
+//Needs to be moved out
+function getNotificationsSettings(lock) {
+  	var company = lock.provider.split(".")[0]
+    return "notifications_settings_"+company;
+}
+
+function sendEmailOnTampered(request, newState, toEmail, fromEmail) {
+  	if(newState.tampered == true){
+        var body = "Please note that we have detected a tampering attempt on container: "+newState.id+".";
+        var subject = newState["id"]+": Tampering Alert";
+      	log.info(sendMail(toEmail, fromEmail, subject, body));
+    }
+}

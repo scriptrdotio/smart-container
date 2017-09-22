@@ -1,0 +1,86 @@
+UI_CHANNEL = "UI_sub_channel";
+
+var channels = {
+  	"acme.com": "UI_sub_channel_acme",
+  	"scriptr.io": "UI_sub_channel_scriptr"
+}
+
+function getChannelName(company){
+  	return channels[company];
+}
+
+//limit of number of events when getting all data
+DEFAULT_LIMIT = 200;
+//limit of number of events when getting event for one lock
+PER_LOCK_LIMIT = 50;
+
+var states = ["LOCKED", "UNLOCKED"];
+var types = ["Dangerous Goods", "Refrigerated/reefer", "Insulated or Thermal Containers", "Car Carriers", "Mining & Defence", "Accomodation", "Building & Construction", "Self Storage"];
+var containers = [
+{"bic":"AAAU", "company":"ASIA CONTAINER LEASING CO LTD", "city":"WAN CHAI", "country":"HK" },
+{"bic":"AACU", "company":"ACE GLOBAL LINES DWC - LLC", "city":"DUBAI", "country":"United Arab Emirates" },
+{"bic":"AAFU", "company":"BUNDESMINISTERIUM FUR LANDESVERTEIDIGUNG", "city":"WIEN", "country":"Austria" },
+{"bic":"AAGU", "company":"MTU ONSITE ENERGY SYSTEMS GMBH", "city":"RUHSTORF", "country":"Germany" },
+{"bic":"BAEU", "company":"BAE SYSTEMS", "city":"FRIDLEY, MN-55421", "country":"United States" },
+{"bic":"BAFU", "company":"BULKHAUL LTD", "city":"MIDDLESBROUGH CLEVELAND", "country":"United Kingdom" },
+{"bic":"BAMU", "company":"SPEDITION BAUMLE GMBH", "city":"Murg", "country":"Germany" },
+{"bic":"BAPU", "company":"BECHTEL INTERNATIONAL INC", "city":"HOUSTON TX-77056-6503", "country":"United States" },
+{"bic":"BARU", "company":"BARBADOS BOTTLING CO.LTD", "city":"BRIDGETOWN", "country":"Barbados" },
+{"bic":"CAAU", "company":"CAI INTERNATIONAL", "city":"SAN FRANCISCO, CA 94105", "country":"United States" },
+{"bic":"CABU", "company":"CHAKIAT AGENCIES PVT LTD", "city":"CHENNAI", "country":"India" },
+{"bic":"CACU", "company":"HAPAG LLOYD A.G", "city":"HAMBURG", "country":"Germany" },
+{"bic":"CGMU", "company":"CMA-CGM", "city":"MARSEILLE CEDEX 02", "country":"France" },
+{"bic":"DAAU", "company":"DANISH DEFENCE ACQUISITION AND LOGISTICS", "city":"BALLERUP", "country":"Denmark" },
+{"bic":"DACU", "company":"DANCONTAINER A/S", "city":"COPENHAGEN", "country":"Denmark" },
+{"bic":"DADU", "company":"TANKTRAILER NEDERLAND", "city":"NUMANSDORP", "country":"Netherlands" },
+{"bic":"DAGU", "company":"STE DANGEXPRESS", "city":"LUCE", "country":"France" },
+{"bic":"EADU", "company":"EADS SPACE TRANSPORTATION SAS", "city":"LES MUREAUX", "country":"France" },
+{"bic":"EAFU", "company":"AGI", "city":"BH15 3SS, POOLE", "city":"United Kingdom" },
+{"bic":"EAGU", "company":"ERNST AUTOTRANSPORT AG", "city":"ZURICH", "country":"Switzerland" },
+{"bic":"FAAU", "company":"MAERSK LINE A/S", "city":"Copenhagen", "country":"Denmark" },
+{"bic":"FACU", "company":"TWS TANKCONTAINER-LEASING GMBH & CO KG", "city":"Hamburg", "country":"Germany" },
+{"bic":"FAFU", "company":"CESCOF", "city":"RAMBOUILLET CEDEX", "country":"France" },
+{"bic":"GAAU", "company":"GUJARAT ALKALIES AND CHEMICALS LIMITED", "city":"vadodara", "country":"India" },
+{"bic":"GACU", "company":"ABODI", "city":"MADRID", "country":"Spain" },
+{"bic":"GAEU", "company":"TEXTAINER EQUIPMENT MANAGEMENT LTD-", "city":"HAMILTON, HM HX", "country":"Bermuda" },
+{"bic":"HAAU", "company":"HAANPAA INTERNATIONAL AB", "city":"HELSINGBORG", "country":"Sweden" },
+{"bic":"HACU", "company":"HAIAN TRANSPORT & STEVEDORING JSC", "city":"Haiphong", "country":"Viet Nam" },
+{"bic":"HAEU", "company":"HAEWOO GLS CO LTD", "city":"SEOUL", "country":"Korea, Republic of" },
+{"bic":"IAAU", "company":"INTERASIA LINES SINGAPORE PTE.LTD", "city":"SINGAPORE", "country":"Singapore" },
+{"bic":"IACU", "company":"I.A.C.C. INTERNATIONAL ASSOCIATED", "city":"CAIRO", "country":"Egypt" },
+{"bic":"JAAU", "company":"JORDAN BROMINE COMPANY LIMITED", "city":"AMMAN", "country":"Jordan" },
+{"bic":"KCPU", "company":"KOIKE MEDICAL CO LTD", "city":"TOKYO", "country":"Japan" },
+{"bic":"KCSU", "company":"KANTO KAGAKU SINGAPORE PTE LTD", "city":"SINGAPORE", "country":"Singapore" },
+{"bic":"LAIU", "company":"IAL CONTAINER LINE (UK) LIMITED", "city":"LONDON", "country":"United Kingdom" },
+{"bic":"LARU", "company":"LAROUTE SA", "city":"ZUG", "country":"Switzerland" },
+{"bic":"MAKU", "company":"MAKIOS LOGISTICS", "city":"THESSALONIKI", "country":"Greece" },
+{"bic":"NABU", "company":"ECST CONTAINER SERVICES & TRADING GMBH", "city":"SEEVETAL / BULLENHAUSEN", "country":"Germany" },
+{"bic":"NAFU", "company":"NORWEGIAN DEFENCE LOGISTIC ORG - AIR", "city":"KJELLER", "country":"Norway" },
+{"bic":"OACU", "company":"LINDE-HADJIKYRIAKOS GAS LTD.", "city":"STROVOLOS", "country":"Cyprus" },
+{"bic":"OALU", "company":"OCEAN AFRICA CONTAINER LINE (PTY) LTD", "city":"DURBAN", "country":"South Africa" },
+{"bic":"PACU", "company":"XPO LOGISTICS", "city":"DUBLIN, OH 43016", "country":"United States" },
+{"bic":"PAGU", "company":"PAGANELLA SPA", "city":"MANTOVA MN", "country":"Italy" },
+{"bic":"RACU", "company":"TRASMEDITERRANEA CARGO S.A.U.", "city":"BARCELONA", "country":"Spain" },
+{"bic":"RAEU", "company":"REACH AMERICA ESG, LTD.", "city":"SAN JOSE", "country":"United States" },
+{"bic":"SACU", "company":"WALLENIUS WILHELMSEN LOGISTICS AS", "city":"LYSAKER", "country":"Norway" },
+{"bic":"SAEU", "company":"EDF", "city":"SAINT-DENIS", "country":"France" },
+{"bic":"TABU", "company":"STOLT TANK CONTAINERS LEASING LTD", "city":"HAMILTON", "country":"Bermuda" },
+{"bic":"TACU", "company":"EAST CIRCLE INVESTMENT COPR", "city":"BP 0830-01580", "country":"Panama" },
+{"bic":"UAFU", "company":"UAFL UNITED AFRICA FEEDER LINE", "city":"MAPOU", "country":"Mauritius" },
+{"bic":"UASU", "company":"UNITED ARAB SHIPPING CO. SAG", "city":"SAFAT", "country":"Kuwait" },
+{"bic":"UBBU", "company":"DEN HARTOGH DRY BULK LOGISTICS LTD", "city":"Hull, HU3 4AE", "country":"United Kingdom" },
+{"bic":"VACU", "company":"JSC VOSTOK AVIATION COMPANY", "city":"KHABAROVSK", "country":"Russian Federation" },
+{"bic":"VAGU", "company":"VA GROUP LTD.", "city":"MOSCOW", "country":"Russian Federation" },
+{"bic":"VANU", "company":"VANHUB EQUIPMENT SERVICES LTD", "city":"KOWLOON", "country":"HK" },
+{"bic":"WABU", "company":"HOYER GMBH", "city":"HAMBURG", "country":"Germany" },
+{"bic":"WACU", "company":"AIR LIQUIDE NIGERIA PLC", "city":"LAGOS", "country":"Nigeria" },
+{"bic":"XACU", "company":"ALPS CONTAINER", "city":"FREILASSING", "country":"Germany" },
+{"bic":"XCTU", "company":"WPPA LTD", "city":"DUBAI", "country":"United Arab Emirates"},
+{"bic":"YBFU", "company":"SPECIALTY MOVERS, LLC", "city":"Ann Arbor", "country":"United States" },
+{"bic":"YDXU", "company":"PT INDONESIA GUANG CHING NICKEL AND STAINLESS STEEL IND", "city":"SOUTH JAKARTA", "country":"Indonesia" },
+{"bic":"YEOU", "company":"YEOU FA CHEMICAL CO LTD", "city":"TAIPEI", "country":"Taiwan (China)" },
+{"bic":"ZEEU", "company":"ZEENNI S TRADING AGENCY", "city":"TRIPOLI", "country":"Lebanon" },
+{"bic":"ZETU", "company":"ZETA SYSTEM SRL", "city":"MATERA", "city":"", "country":"Italy" },
+{"bic":"ZGRU", "company":"ZGROUP SAC", "city":"LIMA 36", "country":"Peru" }];
+
+var names = ["Donnell", "Jo", "Chastain", "Freeland", "Cull", "Audrie", "Dolli", "Brigette", "Harmonia", "Boulanger", "Jackie", "Beryle", "Corena", "Bastian", "Bride", "Bortman", "Foscalina", "Ellette", "Hiller", "Gene", "Andie", "Coombs", "Citron", "Cyma", "Goltz", "Hoenack", "Gracia", "Evetta", "Bernarr", "Gildus", "Annabal", "Bettye", "Deena", "Edgell", "Birchard", "Anya", "Emilie", "Bugbee", "Gran", "Amann", "Devi", "Bowerman", "Bertrando", "Georgy", "Elihu", "Emelia", "Coletta", "Hazem", "Howe", "Fraya", "Faires", "Ammon", "Dorey", "Ezequiel", "Christin", "Fari", "Hey", "Cadal", "Berghoff", "Edris", "Audrey", "Adelheid", "Heimer", "Follansbee", "Geller", "Issiah", "Estis", "Buttaro", "Hinkel", "Deonne", "Gurl", "Garson", "Cynthie", "Coughlin", "Goeger", "Chabot", "Belda", "Hallvard", "Gord", "Algy", "Jany", "Cordle", "Diarmid", "Adaurd", "Geerts", "Hagan", "Hickey", "Dorn", "Gelhar", "Jaymie", "Jehoash", "Daub", "Bernt", "Atronna", "Helge", "Eisele", "Delia", "Chud", "Burl", "Firooc"];

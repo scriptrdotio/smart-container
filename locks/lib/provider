@@ -1,0 +1,12 @@
+function getCompanyName(userId){
+  	return userId.split("@")[1];
+}
+function getProvider(account){
+  	//assuming the account is an email, the provider is the company name the account belongs to
+  	var company = getCompanyName(account);
+  	return _resolve(company);
+}
+function _resolve(companyName){
+  	var providers = require("locks/api/lib/providers");
+  	return providers.resolve(companyName);
+}

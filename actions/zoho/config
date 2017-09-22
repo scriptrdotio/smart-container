@@ -1,0 +1,17 @@
+TO_EMAIL = "telematics-demo@scriptr.io";
+FROM_NAME = "Telematics Demo";
+
+var _templates = {
+  BATTERY_TICKET: {
+    subject: 'Lock <%= lockId %>: Battery Level Drop!',
+    body: 'Lock with <%= lockId %> battery level drop below <%= batteryThreshold %> %.'
+  },
+  TAMPERED_TICKET: {
+    subject: 'Lock <%= lockId %>: Tamper Attempt!',
+    body: 'Lock with id <%= lockId %> has been tampered with.'
+  }
+}
+
+function getTemplate(event){
+  return _templates[event];
+}

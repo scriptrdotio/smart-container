@@ -1,0 +1,17 @@
+var log = require("log");
+log.setLevel("INFO");
+var company = ((request.user.id).split("@")[1]).split(".")[0];
+log.info(company);
+var notification_key = "notifications_settings_"+company;
+var settings = storage.global[notification_key];
+var export = {};
+if (settings.emails) {
+  export.emails = settings.emails.indexOf(",") > -1 ? settings.emails.split(",") : [].concat(settings.emails);
+}
+
+if (settings.mobiles) {
+  export.mobiles = settings.mobiles.indexOf(",") > -1 ? settings.mobiles.split(",") : [].concat(settings.mobiles);
+}
+
+return export;
+

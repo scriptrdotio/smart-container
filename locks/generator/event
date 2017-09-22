@@ -1,0 +1,53 @@
+var config = require("locks/config");
+var properties = require("locks/generator/properties");
+var pub = require("locks/api/lib/publishData");
+var providers = require("locks/api/lib/providers");
+var document = require("document");
+var moment = require("/modules/momentjs/moment.min.js").moment;
+var process = require("locks/generator/process");
+var log = require("log");
+log.setLevel("INFO");
+
+//get all parameters from http body or parameters
+var query = null;
+if(request.body != null){
+	query = request.body;
+}else{
+	if(request.parameters.body != null){
+	   	try{
+      		query = JSON.parse(request.parameters.body);  
+    	}catch(e){
+      		return "INVALID PARAMETER: invalid JSON";
+    	}
+    }
+}
+if(query == null){
+  	query = {};
+}
+
+var locksString = storage.global.locations;
+var locks = JSON.parse(locksString);
+var lock = null;
+//trigger event for specific lock
+log.info("query info: " +JSON.stringify(query));
+if(query.lockId){
+    log.info("lockId: " +query.lockId);
+    lock = findLock(query.lockId, locks);
+    log.info("lock info: " +JSON.stringify(lock));
+}else{
+    //or select a random lock and simulate a state change
+    do {
+        lock = locks[Math.floor(Math.random() * locks.length)];
+    } while(lock.id == "TXXU-1234567") 
+}
+
+return process.processLockEvent(lock, query, true)
+
+function findLock(id, locks){
+  	for(var i = 0; i < locks.length; i++){
+      	if(locks[i].id == id){
+          	return locks[i]
+        }
+    }
+  	return null;
+}

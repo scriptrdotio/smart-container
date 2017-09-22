@@ -1,0 +1,13 @@
+var pointGenerator = require("locks/utils/pointGenerator");
+var config = require("locks/config");
+var providers = require("locks/api/lib/providers");
+
+var points = pointGenerator.generateRandomLocations({"lat": 45.5602805, "lng": -73.8521324}, 200, config.containers.length, config.containers, config.types, providers.getCompanies());
+
+points.push({"latitude":45.5925036750802,"longitude":-73.70003150453307, "bic":"TXXU","company":"TRIDENT SEAFOODS CORP", "city":"SEATTLE, WA 98107-4000", "country":"United States", "id": "TXXU-1234567", "type": "Refrigerated/reefer", "provider": "acme.com"})
+
+points = JSON.stringify(points);
+
+storage.global.locations = points;
+
+return points;

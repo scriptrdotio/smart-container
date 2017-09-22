@@ -1,0 +1,121 @@
+//optional parameter lock-id
+var config = require("locks/config");
+var formatter = require("locks/api/lib/dataFormatter");
+var provider = require("locks/lib/provider");
+var document = require("document");
+var query = null;
+var timeframe = "this_1_years";
+var limit = config.DEFAULT_LIMIT;
+
+var log = require("log")
+// var provider = provider.getCompanyName(request.user.id) || "acme.com";
+var provider = "acme.com";
+var filter = 'provider="' + provider + '"';
+
+var query = null;
+if(request.body != null){
+	query = request.body;
+}else{
+	if(request.parameters.body != null){
+	   	try{
+      		query = JSON.parse(request.parameters.body);  
+    	}catch(e){
+      		return "INVALID PARAMETER: invalid JSON";
+    	}
+    }
+}
+if(query == null){
+  query = {}
+}
+
+if(query.lockId) {
+    filter += ' and id = "' + query.lockId + '"';
+  	result = document.query({"query":filter, "fields":"*", "sort":"apsdb.creationTime<date:DESC>"});
+}else {
+  result = getAllLocks(provider);
+}
+
+var log = require("log")
+log.setLevel("INFO")
+log.info(JSON.stringify(result))
+log.info(filter)
+result = result.result.documents;
+result =  formatter.format(result);
+/**
+var nucleo = {
+			"0": [
+				{
+                    "id": "123456",
+					"lat": "45.5925036750802",
+					"long": "-73.70003150453307",
+                    "location": "Nucleo",
+					"type": {
+						"value": "Yale / Keypad"
+					},
+					"state": {
+						"value": "UNLOCKED"
+					},
+					"by": {
+						"value": "Gina"
+					},
+					"company": {
+						"value": "acme.com"
+					},
+					"batteryLevel": {
+						"value": "2.0%"
+					},
+					"tampered": {
+						"value": false
+					},
+					"latest": false,
+					"timestamp": "2017-08-24T13:36:00.000Z"
+				}
+			],
+			"source": "nucleo",
+			"order": [
+				"0"
+			]
+		}
+result["123456"] = nucleo;
+**/
+return result
+
+// new - added on 2017-03-02. 
+/*
+ * This function returns the latest document persisted for all locks in storage.global.locations for a given provider
+ */
+function getAllLocks(provider) {
+  
+  var locations = JSON.parse(storage.global.locations);
+  console.log("locations: " + JSON.stringify(locations))    
+  var ids = [];
+  for (var i = 0; i < locations.length; i++) {
+   if (provider && provider == locations[i].provider) { 
+     ids.push(locations[i].id);
+   }
+  }
+  console.log("IDs: " + JSON.stringify(ids))  
+  var data = {
+    result: {
+      documents:[]
+   	}
+  };
+  for (var i = 0; i < ids.length; i++) {
+   /** var queryString = {"query":'id ="' + ids[i] + '" AND ' + filter, "fields":"*", "sort":"apsdb.creationTime<date:DESC>", "resultsPerPage": 1};
+    console.log(JSON.stringify(queryString));
+    var resp = document.query(queryString);
+    **/
+    //Redis
+    var redis = require("redis");
+    var resp = redis.lrange(ids[i], 0, 100);
+      console.log(resp)
+    if(resp.length > 0) data.result.documents.push(JSON.parse(resp[0]))
+    /**
+    if (resp.metadata.status == "success" && resp.result.documents.length > 0) {
+      var doc = resp.result.documents[0];
+      data.result.documents.push(doc);
+    }**/
+  }
+  
+  return data;
+}

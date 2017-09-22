@@ -1,0 +1,3 @@
+delete storage.global.locations;
+delete storage.global.notifications_settings_acme;
+delete storage.global.notifications_settings_scriptr;

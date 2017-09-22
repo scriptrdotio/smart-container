@@ -1,0 +1,27 @@
+var log = require("log")
+log.setLevel("INFO")
+//check if lock has associated rule and execute it
+function process(lock, request){
+  try{
+    var rule = require("rules/simulator/"+lock.provider.split(".")[0]+"/asset_" + lock.id);  
+    log.info("Start Proccessing Specific Locking rule")
+    rule.execute(lock, request);
+    log.info("End Proccessing Specific Locking rule");
+      
+    var table =  require("/nucleo/entities/rules/decisionTableUtils");
+    log.info("Start Proccessing Specific Temperature rule")
+    var decisions = table.executeDecisionTable("rules/simulator/"+lock.provider.split(".")[0]+"/asset_temperature_" + lock.id, lock);
+    log.info("End Proccessing Specific Temperature rule")
+  }catch(e){
+    var rule = require("rules/simulator/"+lock.provider.split(".")[0]+"/asset_generic");  
+    log.info("Start Proccessing Generic Locking rule")
+    rule.execute(lock, request);
+    log.info("End Proccessing Generic Locking rule")
+   
+    var table =  require("nucleo/entities/rules/decisionTableUtils");
+    log.info("Start Proccessing Generic Temperature rule")
+    var decisions = table.executeDecisionTable("rules/simulator/acme/asset_temperature_generic", lock);
+    log.info("End Proccessing Generic Temperature rule")
+    
+  }
+}

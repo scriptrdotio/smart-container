@@ -1,0 +1,48 @@
+function format(data){
+    var result = {};
+    for(var index = 0; index < data.length; index++ ){
+        var datum = data[index];
+        if(datum.id == "TXXU-1234567"){
+            if(result[datum.id] == null){
+                result[datum.id] = {
+                    "0": [],
+                    "order": ["0"],
+                    "source":"nucleo"
+                };
+            }
+        }else if(result[datum.id] == null){
+            result[datum.id] = {
+                "0": [],
+                "order": ["0"],
+                "source":"simulator"
+            };
+        }
+        var point = {
+            id: datum.id,
+            lat: datum.latitude,
+            long: datum.longitude,
+            location: datum.type, //Container type
+            type: {value: datum.city + " / " + datum.country},
+            state: {value: datum.state},
+            temperature: {value: datum.temperature},
+            humidity:  {value: datum.humidity},
+            country:  {value:datum.country},
+            city:  {value: datum.city},
+            pressure:  {value: datum.pressure},
+            by: {value: datum.by},
+            company: {value: datum.company},
+            batteryLevel: {value: datum.batteryLevel},
+            tampered: {value: ((datum.tampered && (datum.tampered == "true" || datum.tampered == true)) ? true : false)},
+            latest: result[datum.id].length == 0 ? true : false
+        }
+        if(datum.creationDate == null){
+            point.timestamp = (new Date()).toISOString();
+        }else{
+            point.timestamp = (new Date(datum.creationDate)).toISOString();
+        }
+        result[datum.id]["0"].push(point)
+
+
+    }
+    return result;
+}

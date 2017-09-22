@@ -1,0 +1,36 @@
+//query will look like
+/*
+  	{	lockId: 123123, 
+  	}
+  	*/
+var config = require("locks/config");
+var provider = require("locks/lib/provider");
+var document = require("document");
+var query = {};
+if(request.body != null){
+	query = request.body;
+}else{
+  	query = request.parameters.body;
+}
+
+if(query != null){
+  	try{
+    	query = JSON.parse(query);   
+  	}catch(e){
+    	return "INVALID OR MISSING PARAMETER" + query;
+  	}	
+}
+
+var filter = ""
+if(query.temperatureHigh){
+    filter +="temperature<numeric> >30"
+}
+
+var log = require("log");
+log.setLevel("INFO");
+log.info(filter);
+console.log(JSON.stringify(filter))
+var response = document.query({"query":filter, "fields":"*", "sort": "temperature<numeric:DESC>"});
+response = response.result.documents;
+
+return response;

@@ -1,0 +1,29 @@
+
+function execute(newState, request){
+  	var config = require("rules/config");
+    var notifications_settings = storage.global[getNotificationsSettings(newState)];
+    if(notifications_settings && notifications_settings["mobiles"]) {
+        var mobiles = JSON.parse(notifications_settings["mobiles"]);
+        for(var i = 0; i < mobiles.length; i++) {
+          sendSmsOnTampered(request, newState, mobiles[i]["text"]);
+        }
+     } else {
+        sendSmsOnTampered(request, newState, config.MOBILE)
+     }
+  return true;
+}
+
+//Needs to be moved out
+function getNotificationsSettings(lock) {
+  	var company = lock.provider.split(".")[0]
+    return "notifications_settings_"+company;
+}
+
+function sendSmsOnTampered(request, newState, mobile) {
+    if(newState.tampered == true){
+		//send sms 
+      	var sms = require("actions/sms");
+        log.info("send sms");
+      	sms.send("+14235464723", mobile, "Container with bic code '"+ newState.id +"' has been tampered with.");
+    }
+}

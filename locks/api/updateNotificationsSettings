@@ -1,0 +1,93 @@
+var log = require("log");
+log.setLevel("INFO");
+var company = ((request.user.id).split("@")[1]).split(".")[0];
+log.info(company);
+var notification_key = "notifications_settings_"+company;
+
+var query = null;
+
+var emails = request.parameters.emails;
+var mobiles = request.parameters.mobiles;
+
+if (!emails && !mobiles) {
+  
+  if(request.body != null){
+	query = request.body;
+  }else{
+      if(request.parameters.body != null){
+          try{
+              query = JSON.parse(request.parameters.body);  
+          }catch(e){
+              return "INVALID PARAMETER: invalid JSON";
+          }
+      }
+  }
+}else {
+  
+  query = {
+    emails: emails,
+    mobiles: mobiles
+  };
+}
+
+
+if(query == null){
+  query = {}
+}
+
+if(!storage.global[notification_key]) {
+  storage.global[notification_key] = {}
+}
+
+if(query.emails) {
+  storage.global[notification_key]["emails"] = query.emails;
+}
+
+if(query.mobiles) {
+  storage.global[notification_key]["mobiles"] = query.mobiles;
+}
+
+var document = require("document")
+if(query.emails || query.mobiles){
+     var emailsArray= [];
+     var mobilesArray = [];
+     var emails = JSON.parse(query.emails);
+     var mobiles = JSON.parse(query.mobiles);
+     for(var i = 0; i < emails.length; i++){
+         emailsArray.push(emails[i]["text"]);
+     }
+    for(var i = 0; i < mobiles.length; i++){
+        mobilesArray.push(mobiles[i]["text"]);
+    }
+   
+    var fields = {
+        key: toHex("notificationSettings"),
+        formType : "notificationSettings",
+        emails: JSON.stringify(emailsArray),
+        mobiles: JSON.stringify(mobilesArray)
+    }
+    document.save(fields);
+}else{
+    var fields = {
+        key: toHex("notificationSettings"),
+        formType : "notificationSettings",
+        emails: "",
+        mobiles: ""
+    }
+    document.save(fields);
+}
+
+function toHex(input){
+    try { hexcase } catch(e) { hexcase=0; }
+    var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+    var output = "";
+    var x;
+    for(var i = 0; i < input.length; i++)
+    {
+        x = input.charCodeAt(i);
+        output += hex_tab.charAt((x >>> 4) & 0x0F)
+            + hex_tab.charAt( x & 0x0F);
+    }
+    return output;
+}
+return storage.global[notification_key];

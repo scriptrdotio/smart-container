@@ -1,0 +1,16 @@
+var companies = ["acme.com", "scriptr.io"];
+//mapping of company to keen collection
+var providers = {
+  	"acme.com": "lock-events-acme",
+  	"elementn.com": "lock-events-elementn",
+  	"scriptr.io": "lock-events-scriptr"
+}
+//returns a collection based on providers and company name
+function resolve(company){
+  	return providers[company];
+}
+
+//return the list of companies
+function getCompanies(){
+ 	return companies; 	
+}

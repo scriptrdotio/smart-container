@@ -1,0 +1,110 @@
+//Get payload parameters
+var pl = null;
+var requestBody = request.body;
+if (!requestBody) {
+	pl = request.parameters.payload;
+	pl = JSON.parse(pl);
+} else {
+	pl = requestBody.payload;
+}
+
+//START TABLE DECISION CODE
+function execute(pl) {
+
+var decision = [];
+
+//PRESCRIPT START
+var log = require("log");
+log.setLevel("INFO");
+log.info(JSON.stringify(pl));
+//PRESCRIPT END
+
+//RULES EVALUATION START
+if(typeof pl != "object") {
+  return[];
+} else { 
+	  if((pl != null && pl["temperature"] != undefined && pl["temperature"] > 30)){
+       decision.push({ "action": "alert" });
+	} 
+}
+//RULES EVALUATION END
+
+//POSTSCRIPT START
+var smsmodule = require("/nucleo/api/twilio/sms/smsclient");
+var config = require("/nucleo/api/email/config");
+var document = require("document")
+
+if(decision[0] && decision[0].action){
+  alert(pl["id"], decision[0].action);
+}
+
+function alert(id, action) {
+    var body = "Please note that we have detected temperature values above defined threshold. Temperature value is: "+pl["temperature"]+".";
+    var subject = pl["id"]+": Temperature Alert";
+    if(action == "alert"){
+        var key = toHex("notificationSettings");
+        var results = document.get(key);
+        if(results.metadata.status == "failure") {
+            return {status : "failure", errorDetails : "an error has occured when quering Log doc key: " + key, errorMsg: results};
+        } else {
+            var doc =  results.result;
+            var emailsArray = JSON.parse(doc.emails);
+            var mobilesArray = JSON.parse(doc.mobiles);
+            if(typeof emailsArray == "string") emailsArray = [emailsArray];
+            if(typeof mobilesArray == "string") mobilesArray = [mobilesArray];
+            // Send Email
+            for(var i = 0; i < emailsArray.length; i++){
+                sendMail(emailsArray[i], config.FROM, subject, body);
+            }
+            log.info("SEND EMAILS")
+            // Send SMS
+            for(var y = 0; y < mobilesArray.length; y++){
+                try {
+                    var smsClient = new smsmodule.TwilioSMS();
+                    smsClient.send({"number": mobilesArray[y], "message": config.Body});
+                }catch(exception){
+                    return exception;
+                }
+            }
+            
+        }
+    } 
+    
+}
+
+
+function toHex(input){
+    try { hexcase } catch(e) { hexcase=0; }
+    var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+    var output = "";
+    var x;
+    for(var i = 0; i < input.length; i++)
+    {
+        x = input.charCodeAt(i);
+        output += hex_tab.charAt((x >>> 4) & 0x0F)
+            + hex_tab.charAt( x & 0x0F);
+    }
+    return output;
+}
+
+//POSTSCRIPT END
+
+}
+//Check if value is "in" or is "not in" array
+//return true or false
+function evalArrayOperation(value, operator,  array) {
+	if(operator == "in") {
+		return (array.indexOf(value)>-1);
+	} else {
+		return (array.indexOf(value) == -1) ;
+	} 
+}
+
+//isAny function, when condition expression is not important
+function isAny(param) {
+	return true;
+}
+
+//START_REST_CALL 
+return execute(pl);
+//END_REST_CALL

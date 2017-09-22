@@ -1,0 +1,5 @@
+var lock;
+var request;
+
+function execute(lock, request) {
+  return require("actions/notifyOnTampered").execute(lock, request)}

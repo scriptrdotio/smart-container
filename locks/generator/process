@@ -1,0 +1,96 @@
+
+var config = require("locks/config");
+var properties = require("locks/generator/properties");
+var pub = require("locks/api/lib/publishData");
+var providers = require("locks/api/lib/providers");
+var document = require("document");
+var moment = require("/modules/momentjs/moment.min.js").moment;
+var log = require("log");
+log.setLevel("INFO");
+
+function processLockEvent(lock, query, publishData) {
+     if(query.state){
+            if(lock != null){
+                lock.state = query.state;
+                lock.by = request.user.id;
+            } 
+        } else {
+            //generate random lock state
+      lock.state = config.states[Math.floor(Math.random()*config.states.length)];
+      //pick random person to change the lock state
+      //we have a lock, create an event
+      lock.by = config.names[Math.floor(Math.random()*config.names.length)];
+
+        }
+    
+    if(query.tampered == true) { //Whenever we have only a tampered = true sent it means we are simulating a tampering event
+      lock.tampered = "true";
+      lock.tamperDate = new Date().toISOString().split(".")[0]+"+0000"
+    } else if(query.lockId) {
+       lock.tampered = "false"; //Whenever we have only a lockId sent it means we are simulating lock, do not send sms or email for tampering
+    } else {
+      lock.tampered = properties.generateTamperedState();
+      if(lock.tampered == "true"){
+        lock.tamperDate = new Date().toISOString().split(".")[0]+"+0000"
+      }
+    }
+
+    //Need this on single update and on generation of data as we are not loading the lock info from db when updating state
+    lock.batteryLevel = (query.batteryLevel) ? query.batteryLevel : properties.generateBatteryLevel() //Math.floor((Math.random() * 100) + 1);
+
+    lock.temperature =   (query.temperature) ? query.temperature : properties.generateTemperature()  //Math.floor((Math.random() * -130) + 130);
+
+    lock.pressure = (query.pressure) ? query.pressure : properties.generatePressure();
+    
+    lock.humidity =(query.humidity) ? query.humidity : properties.generateHumidityLevel();
+
+    
+    if(lock.temperature > 30 || lock.battery <=35 || query.tampered == true || lock.id != "TXXU-1234567") {
+        //Save only in scriptr alerts
+        lock["meta.types"] = {
+           "batteryLevel": "numeric",
+           "temperature": "numeric",
+           "humidity": "numeric",
+           "pressure": "numeric",
+           "tamperDate": "date"
+        }
+	    //record event in db
+    	var res = document.save(lock);
+    }
+   
+    log.info("lock data")
+    log.info(JSON.stringify(lock)) 
+    
+    
+    /////////
+        var redis = require("redis");
+        var res = redis.lpush(lock.id, JSON.stringify(lock))
+        //and then remove everything but the last 100 keys
+        redis.ltrim(lock.id, 0, 100);
+    ////////
+    log.info("res: " + JSON.stringify(res));
+
+    //call decision table
+    var table = require("rules/tickets/decisionTableUtils");
+    var decisions = table.executeDecisionTable("rules/tickets/alertRulesDecisionTable", lock);
+    var action = require("actions/zoho/createTicket")
+
+    for(var i = 0; i< decisions.length; i++){
+        //email and create zoho tickets based on decision table output
+        action.execute(decisions[i], lock);
+    }
+
+    var channel = config.getChannelName(lock.provider)
+    log.info("channel: " +channel);
+
+    //send info to listening widgets
+     //publish("UI_sub_channel_acme", {lockInfo: JSON.stringify(lock)});
+    if(publishData)
+    	pub.publishData(lock, channel);
+
+    var rules = require("rules/apply");
+    rules.process(lock, request);
+    log.info("rules process done");
+
+    return lock.id
+}

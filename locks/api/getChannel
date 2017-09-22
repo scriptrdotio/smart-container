@@ -1,0 +1,4 @@
+var config = require("locks/config");
+var provider = require("locks/lib/provider");
+var company = provider.getCompanyName(request.user.id);
+return config.getChannelName(company);

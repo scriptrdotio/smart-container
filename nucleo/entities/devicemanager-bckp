@@ -3,7 +3,7 @@ var watsoniot = require("/modules/bluemix/watsoniot/messenger");
 var wunderground = require("/modules/wunderground/simpleclient");
 var smsmodule = require("/nucleo/api/twilio/sms/smsclient");
 var config = require("/nucleo/api/email/config");
-var redis = require("redis");
+var redis = require("redis").getInstance("redisFacade");
 var _= require("modules/underscore/underscore.js")._;
 
 var log = require("log");

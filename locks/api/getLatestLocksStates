@@ -106,7 +106,7 @@ function getAllLocks(provider) {
     var resp = document.query(queryString);
     **/
     //Redis
-    var redis = require("redis");
+    var redis = require("redis").getInstance("redisFacade");
     var resp = redis.lrange(ids[i], 0, 100);
       console.log(resp)
     if(resp.length > 0) data.result.documents.push(JSON.parse(resp[0]))

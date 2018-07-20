@@ -63,7 +63,7 @@ function processLockEvent(lock, query, publishData) {
     
     
     /////////
-        var redis = require("redis");
+        var redis = require("redis").getInstance("redisFacade");
         var res = redis.lpush(lock.id, JSON.stringify(lock))
         //and then remove everything but the last 100 keys
         redis.ltrim(lock.id, 0, 100);
